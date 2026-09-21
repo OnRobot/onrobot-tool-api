@@ -4,54 +4,50 @@
 
 # OnRobot Tool API
 
-OnRobot Tool API is a standalone C++17 library for integrating supported
-OnRobot grippers over Modbus TCP or Modbus RTU.
+Connect a C++17 application to an OnRobot gripper over Modbus TCP or Modbus
+RTU. ROS is not required. The SDK provides a shared library, public headers
+and CMake integration for Ubuntu 24.04 on amd64 (x86_64).
 
-## Supported tools
+**2FG7 · 2FG14 · RG2 · RG6**
 
-**2FG7 · 2FG14 · RG2 · RG6 · 3FG15 · 3FG25**
+The 3FG API is available for evaluation only: **3FG15 · 3FG25**.
+See [supported devices](docs/supported-devices.md) for capabilities and
+realtime firmware compatibility.
 
-See the [supported-device matrix](docs/supported-devices.md) for firmware and
-realtime-control support.
+## Get started
 
-## Install
-
-Download tool api debian packages from [latest release](https://github.com/OnRobot/onrobot-tool-api/releases/latest)
-
-The packages target Ubuntu 24.04 on amd64. Install the matching runtime and
-development packages:
-
-```bash
-sudo apt install \
-  ./libonrobot-tool-api0_<version>_amd64.deb \
-  ./libonrobot-tool-api-dev_<version>_amd64.deb
-```
-
-Then link the installed CMake target:
-
-```cmake
-find_package(onrobot_tool_api REQUIRED CONFIG)
-target_link_libraries(my_application PRIVATE onrobot::tool_api)
-```
-
-## Documentation
+Download a matching runtime/development pair from the
+[latest GitHub Release](https://github.com/OnRobot/onrobot-tool-api/releases/latest).
+Follow [installation](docs/installation.md), then
+[read your gripper's state](docs/getting-started.md) before commanding motion.
 
 | Guide | Contents |
 |---|---|
-| [Getting started](docs/getting-started.md) | First read-only connection, TCP, and RTU |
+| [Getting started](docs/getting-started.md) | Build a read-only example; TCP and RTU setup |
 | [Installation](docs/installation.md) | Debian packages and CMake integration |
-| [Supported devices](docs/supported-devices.md) | Models, firmware, and realtime support |
-| [2FG7 and 2FG14](docs/api/two-finger-grippers.md) | Two-finger commands, state, and limits |
-| [RG2 and RG6](docs/api/rg-grippers.md) | RG commands, telemetry, and limits |
-| [3FG15 and 3FG25](docs/api/three-finger-grippers.md) | Diameter and encoder-angle control |
-| [Parallel session](docs/api/parallel-gripper-session.md) | Managed control loop and recovery |
+| [Supported devices](docs/supported-devices.md) | Models, firmware compatibility and control modes |
+| [2FG7 and 2FG14](docs/api/two-finger-grippers.md) | Widths, commands, signed force and supply power |
+| [RG2 and RG6](docs/api/rg-grippers.md) | Fingertip aperture, angular velocity and safety state |
+| [3FG15 and 3FG25](docs/api/three-finger-grippers.md) | Evaluation support for diameter and angle commands |
+| [Parallel session](docs/api/parallel-gripper-session.md) | Managed loop, watchdog, Stop and recovery |
+| [Diagnostics](docs/diagnostics.md) | Measurement validity, provenance and telemetry |
+| [Changelog](CHANGELOG.md) | Changes and compatibility notes |
+
+## Offline documentation
+
+The development package installs these same guides under
+`/usr/share/doc/onrobot_tool_api/`. Start with `README.md`; relative links and
+images use the same layout as the GitHub documentation.
 
 ## Safety
 
-Secure the gripper, clear its workspace, and provide an independent means of
+Secure the gripper, clear its workspace and provide an independent means of
 stopping the equipment before commanding motion. Software Stop and
-communication watchdogs are not safety-rated emergency stops.
+communication watchdogs are not safety-rated emergency stops. Validate grip
+force and payload retention for the fitted fingers and workpiece.
 
 ## License
 
-Licensed under the [BSD 3-Clause License](LICENSE).
+The distributed library, public headers and documentation use the
+[BSD 3-Clause License](LICENSE). Third-party components retain their respective
+licenses. The SDK implementation source is not part of the distribution.

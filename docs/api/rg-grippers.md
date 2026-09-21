@@ -1,37 +1,30 @@
 # RG2 and RG6 API
 
 `RgGripper` provides conventional and realtime control for RG2 and RG6.
-Construction connects to the device and validates its product identity.
+Construction connects and validates product identity. See
+[supported devices](../supported-devices.md) for realtime compatibility.
 
-See [supported devices](../supported-devices.md) for firmware requirements.
-
-## Coordinates
+## Coordinates and limits
 
 | Coordinate | Meaning |
 |---|---|
-| Width | Opening at the fitted fingertips, including fingertip offset |
-| Task aperture | API name for width in realtime and session commands |
-| Actual width | Diagnostic mechanism width without fingertip offset |
+| `width_mm` / task aperture | Opening at the fitted fingertips, including fingertip offset |
+| `actual_width_mm` | Diagnostic mechanism width without fingertip offset |
 | Mechanism angle | Finger mechanism position in radians |
 
-## Motion limits
+The application supplies safe `RgMotionLimits` for the fitted fingers and
+workspace. The minimum must be at least zero and below the configured maximum.
 
-The application must provide a safe width range when creating the gripper.
-
-| Limit | RG2 | RG6 |
+| Absolute model limit | RG2 | RG6 |
 |---|---:|---:|
 | Maximum width | 110 mm | 160 mm |
-| Maximum force | 40 N | 120 N |
-
-The configured minimum must be zero or greater and below the configured
-maximum. Use limits appropriate for the installed fingers and workspace.
+| Maximum target force | 40 N | 120 N |
 
 ## Conventional control
 
-| Parameter | Unit | Valid range |
-|---|---|---|
-| `width_mm` | mm | Configured motion limits |
-| `force_n` | N | Greater than 0 and no more than the model maximum |
+`RgMoveCommand` contains width in mm and positive target force in N.
+Width must stay within the configured limits; force must not exceed the model
+maximum. There is no conventional speed-percentage field on RG commands.
 
 ```cpp
 #include <onrobot_tool_api/rg_gripper.hpp>
@@ -40,69 +33,53 @@ int main()
 {
     const onrobot::RgMotionLimits safe_limits{ 20.0, 80.0 };
     onrobot::RgGripper gripper(
-        onrobot::Model::RG2,
-        onrobot::tcp("192.0.2.10"),
-        safe_limits);
-
+        onrobot::Model::RG2, onrobot::tcp("192.168.1.1"), safe_limits);
     gripper.move({ 50.0, 20.0 });
     gripper.stop();
 }
 ```
 
-Always replace the example limits with values verified for the installation.
-Secure the gripper, clear its workspace, and provide an independent means of
-stopping the equipment before commanding motion.
+Replace the host, limits and target with values verified for your installation.
+Secure the gripper, clear its workspace and provide an independent means of
+stopping the equipment before running motion examples. Support the workpiece
+before stopping or releasing a grip.
 
-## State
+## State and diagnostics
 
-`state()` returns:
+`state()` provides busy/grip flags, both safety-switch channels and safety DC
+error, fingertip offset, voltage/current, depth, temperature, compensated and
+uncompensated width, mechanism angle/velocity, task velocity, error code and
+raw status. Field suffixes identify units: mm, V, A, °C and rad.
 
-| Field | Meaning |
-|---|---|
-| `busy` | Motion is active |
-| `grip_detected` | An object has been detected |
-| `safety_1_pushed` | Safety switch 1 is pushed |
-| `safety_1_triggered` | Safety switch 1 is triggered |
-| `safety_2_pushed` | Safety switch 2 is pushed |
-| `safety_2_triggered` | Safety switch 2 is triggered |
-| `safety_dc_error` | Safety circuit reports a DC error |
-| `fingertip_offset_mm` | Configured fingertip offset in mm |
-| `motor_voltage_v` | Motor voltage in V |
-| `motor_current_a` | Motor current in A |
-| `actual_depth_mm` | Current depth in mm |
-| `actual_relative_depth_mm` | Relative depth in mm |
-| `temperature_c` | Temperature in °C |
-| `width_mm` | Fingertip-compensated width in mm |
-| `actual_width_mm` | Width without fingertip compensation in mm |
-| `actual_width_with_fingertip_offset_mm` | Compatibility name for `width_mm` |
-| `mechanism_angular_position_rad` | Mechanism angle in rad |
-| `mechanism_angular_velocity_rad_s` | Mechanism angular velocity in rad/s |
-| `task_velocity_mm_s` | Fingertip opening velocity in mm/s |
-| `error_code` | Device error code |
-| `raw_status` | Unmodified device status word |
-
-Other available readings:
-
-| Method | Values |
-|---|---|
-| `identity()` | Product code and firmware version |
-| `maximumForceN()` | Model force limit |
-| `configuration()` | Long-term power limit |
-| `realtimeCycle()` | Position, velocity, force, grip, and safety feedback |
+`identity()` returns product code and firmware version; `configuration()` reads
+long-term power limit. `diagnostics()` provides validity-tagged telemetry.
+RG command-force feedback is **command-derived, not measured contact force**;
+do not present it as a force-sensor reading. See [diagnostics](../diagnostics.md).
 
 ## Realtime control
 
 | Command | Input | Limit |
 |---|---|---|
-| `RgRealtimePositionCommand` | Fingertip-compensated opening and force | Configured width limits; force between 0 and model maximum |
-| `RgRealtimeVelocityCommand` | Signed mechanism angular velocity | RG2: 67.35°/s; RG6: 48.65°/s |
+| `RgRealtimePositionCommand` | Fingertip-compensated aperture (mm), positive force (N) | Configured aperture range; model force ceiling; force must encode to a nonzero value |
+| `RgRealtimeVelocityCommand` | Signed mechanism angular velocity (rad/s) | RG2: 67.35°/s; RG6: 48.65°/s |
 
-Realtime velocity is supplied in radians per second. Positive values open the
-gripper and negative values close it.
+Positive angular velocity opens; negative closes. The velocity command has no
+force-target field. Position and conventional control use the same compensated
+task-aperture coordinate.
 
-`realtimeCycle()` performs one command-and-feedback transaction. Applications
-that need a managed loop, command timeout, and recovery can use
-[`ParallelGripperSession`](parallel-gripper-session.md).
+`realtimeCycle()` performs one synchronous command/feedback transaction. It
+returns task and mechanism position/velocity, grip and safety flags, and a
+force field with explicit validity. It does not create a control loop. Use
+[`ParallelGripperSession`](parallel-gripper-session.md) for a managed loop,
+command watchdog, Stop and recovery.
 
-Invalid values and connection, timeout, protocol, or device failures throw
+## Stop and safety state
+
+Stop does not clear a latched fault. Check safety flags and remove the cause
+before explicitly requesting recovery through a session. A safety DC error
+requires a device power cycle after making the equipment safe; software cannot
+clear it. Software Stop and reported safety state do not replace your
+installation's safety system.
+
+Invalid arguments, connection, timeout, protocol and device failures throw
 `DeviceError`.

@@ -1,13 +1,15 @@
 # Documentation
 
-This directory contains the documentation intended for users of the public
-OnRobot Tool API distribution.
+Start with [installation](installation.md) and the
+[read-only getting-started example](getting-started.md).
 
-- [Getting started](getting-started.md), including Modbus TCP and RTU setup
-- [Installation](installation.md), including CMake integration
-- [Supported devices](supported-devices.md) and qualified capabilities
+- [Supported devices](supported-devices.md)
 - API guides:
   - [2FG7 and 2FG14](api/two-finger-grippers.md)
   - [RG2 and RG6](api/rg-grippers.md)
-  - [3FG15 and 3FG25](api/three-finger-grippers.md)
+  - [3FG15 and 3FG25 — evaluation only](api/three-finger-grippers.md)
   - [Parallel gripper session](api/parallel-gripper-session.md)
+- [Diagnostics and device telemetry](diagnostics.md)
+- [Changelog](../CHANGELOG.md)
+
+Return to the [Tool API overview](../README.md).
