@@ -15,11 +15,12 @@ and 2FG14.
 
 ## Firmware compatibility
 
-Realtime admission checks the connected device against the compatibility
-profile included in the SDK, using the versions listed above. The 2FG check
-also compares firmware source identity. A matching numeric version alone is
-not sufficient; do not bypass an incompatibility error. Newer versions are
-not automatically accepted.
+The table lists minimum realtime firmware versions. The SDK accepts these
+versions and newer ones using numeric version comparison; build hashes do not
+restrict compatibility. Device identity and response validation still apply.
+The reported build identifies what is installed, not whether that exact build
+has been tested. See the [2FG command contract](api/two-finger-grippers.md)
+for the force behavior available from 2FG7 firmware 1.0.34.
 
 The conventional 3FG API is available for evaluation only. It validates product
 identity and reads diameter limits, but does not provide realtime control or

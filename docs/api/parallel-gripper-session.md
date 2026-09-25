@@ -48,6 +48,32 @@ mode, fresh measurements and busy/grip flags. Stop does not implicitly clear a
 latched fault; recovery requires a safe installation and fresh motion intent
 after completion. Do not assume physical standstill from software acknowledgement.
 
+A blocking motion call belongs to the session state in which it began. It
+cannot become new motion after a fault, recovery or deactivation/reactivation.
+Submit fresh intent after recovery succeeds; an expired call reports
+`Cancelled` (or `DeviceFault` while the fault remains latched). `tryCommand()`
+does not wait; each retry is a new admission attempt owned by the caller.
+
+## Observe recovery
+
+`tryRequestRecovery(sequence)` returns `Accepted` only when the faulted session
+queues a new recovery. `Busy` leaves the output sequence unchanged. Only one
+recovery can be active; repeated `requestRecovery()` calls do not replace it.
+
+Use `trySnapshot(state, identity, recovery)` with
+`ParallelGripperRecoveryState` to copy a coherent observation without allocating
+or waiting. If it returns false, all outputs are unchanged. The optional
+velocity-calibration overload also accepts this recovery output.
+
+Match `active_sequence` or `result_sequence` to the admitted sequence.
+`phase` distinguishes `Queued` from `Running`; a terminal `result` is
+`Succeeded`, `Failed`, or `Aborted`, with `result_code` describing the cause.
+The last terminal result remains available during later commands and recovery
+attempts. Success means the worker validated the connection and feedback and
+returned to active idle. Failure keeps the fault latched; shutdown finalization
+aborts an unfinished recovery. Counters and elapsed waiting time are not
+recovery outcomes. Submit a new request only after resolving a failed attempt.
+
 ## Modes and command refresh
 
 The session supports conventional external grip, model-specific realtime
@@ -62,9 +88,8 @@ Transitioning between active modes sends Stop before starting the new mode.
 
 When an applicable refresh timeout expires, the worker sends Stop and returns
 to idle. Refresh intent regularly; a configured exchange period alone does not
-refresh the command. All 2FG realtime motion commands require a positive
-closing-force target. See the [2FG API](two-finger-grippers.md) for field order,
-units and live limits.
+refresh the command. See the [2FG realtime command contract](two-finger-grippers.md#realtime-control)
+for force targets, field order, units and live limits.
 
 ## Process image
 

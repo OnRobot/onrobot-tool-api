@@ -54,7 +54,7 @@ identity. None of these fields is a unique device serial number.
 
 The normal and realtime force fields preserve the firmware sign convention:
 closing into an object is negative and opening into an object is positive.
-Inputs remain positive force targets for a closing grip. Use the absolute value
+Command force is a closing-force magnitude, not signed feedback. Use the absolute value
 only when displaying an unsigned magnitude; preserve the signed feedback and
 do not negate the command. The status-derived booleans identify busy,
 grip-detected, not-calibrated, and linear-sensor-error conditions.
