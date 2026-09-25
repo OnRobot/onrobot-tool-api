@@ -46,6 +46,58 @@ before stopping or releasing a grip.
 the device-reported external-width endpoints, maximum conventional force and
 100% speed; use `grip()` or `move()` when selecting force and speed explicitly.
 
+### Conventional speed profiles
+
+The SDK provides a representative conversion between the native 2FG speed
+percentage and estimated full-travel peak aperture speed in mm/s. The conversion uses the
+requested force, the current device force ceiling, and an automatically selected
+device calibration:
+
+```cpp
+#include <onrobot_tool_api/two_finger_gripper.hpp>
+#include <onrobot_tool_api/model_capabilities.hpp>
+
+int main()
+{
+    onrobot::TwoFingerGripper gripper(
+        onrobot::Model::TwoFG7, onrobot::tcp("192.168.1.1"));
+    const auto calibration = gripper.velocityCalibration();
+    const auto limits = gripper.limits();
+    if (!calibration.has_value()) {
+        return 0;
+    }
+    const auto speed = onrobot::conventionalVelocityMmS(
+        onrobot::Model::TwoFG7,
+        *calibration,
+        onrobot::ConventionalVelocityDirection::Fastest,
+        40.0, limits.maximum_force_n,
+        50.0);
+    const auto percentage = onrobot::conventionalSpeedPercentForVelocity(
+        onrobot::Model::TwoFG7,
+        *calibration,
+        onrobot::ConventionalVelocityDirection::Fastest,
+        40.0, limits.maximum_force_n,
+        80.0);  // 80 mm/s
+    if (!speed.has_value() || !percentage.has_value()) {
+        return 0;
+    }
+    return 0;
+}
+```
+
+Check `velocityCalibration()` before calling either converter. An unrecognized
+or uncharacterized configuration returns no conversion; do not substitute
+another calibration. Native percentage commands remain available.
+
+Use `ConventionalVelocityDirection::Fastest` to select the faster estimated
+full-travel peak of opening and closing. The inverse returns the greatest
+integer percentage whose estimated peak does not exceed the requested bound.
+Positive finite bounds above the modeled peak select 100%; bounds below the
+modeled minimum select 1%, whose estimated speed exceeds the request.
+Invalid or unsupported contexts return no value.
+The estimates characterize unloaded representative units, not certified
+speed limits. Native `speed_percent` commands remain available.
+
 ## State and diagnostics
 
 `state()` returns `busy`, `grip_detected`, `not_calibrated`,
@@ -54,8 +106,8 @@ raw motor width, signed force and `raw_status`. Widths are mm; force is N.
 `limits()` supplies width limits and conventional/realtime force ceilings.
 
 Closing into an object produces **negative** signed force feedback; opening
-into an object produces **positive** feedback. Closing-force targets remain
-positive. Preserve the signed feedback; use its absolute value only when
+into an object produces **positive** feedback. Command force is a closing-force
+magnitude, not signed feedback. Preserve the signed feedback; use its absolute value only when
 displaying an unsigned magnitude.
 
 `diagnostics()` adds validity-tagged electrical, temperature, status and
@@ -65,17 +117,20 @@ statistics data. See [diagnostics](../diagnostics.md).
 
 | Command | Fields in constructor/aggregate order |
 |---|---|
-| `RealtimePositionCommand` | Aperture (mm), maximum velocity (mm/s), positive closing force (N) |
-| `RealtimeVelocityCommand` | Signed aperture velocity (mm/s), positive closing force (N) |
+| `RealtimePositionCommand` | Aperture (mm), maximum velocity (mm/s), closing force (N) |
+| `RealtimeVelocityCommand` | Signed aperture velocity (mm/s), closing force (N) |
 | `RealtimeForcePositionCommand` | Aperture (mm), closing force (N), maximum approach velocity (mm/s) |
 | `RealtimeForceVelocityCommand` | Closing force (N), signed approach velocity (mm/s) |
 
 Position must stay within live external-width limits. Maximum approach velocity
 is 0–300 mm/s; signed velocity is −300–300 mm/s. Positive velocity opens and
-negative velocity closes. Force targets must be positive: at least 30 N on
-2FG7 or 40 N on 2FG14, and no greater than the device's live realtime ceiling
+negative velocity closes. On 2FG7 firmware 1.0.34 and newer, opening ignores
+force; non-opening requests below 30 N (including zero) execute at 30 N.
+Negative targets are rejected. On earlier supported 2FG7 firmware, use at
+least 30 N; on 2FG14 use at least 40 N. Targets must not exceed the live realtime ceiling
 from `limits()`. If no positive ceiling is reported, the SDK uses 95 N for
-2FG7 or 196 N for 2FG14. Values that encode to zero are rejected.
+2FG7 or 196 N for 2FG14. Releasing a force hold using a position command requires
+a target more than 1 mm above the current aperture. Use Stop to stop motion.
 
 One position command with all required arguments:
 
