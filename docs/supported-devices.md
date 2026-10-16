@@ -6,10 +6,11 @@
 | 2FG14 | ✅ | ✅ | ✅ | ✅ | 1.1.21 |
 | RG2 | ✅ | ✅ | ✅ | ❌ | 1.0.10 |
 | RG6 | ✅ | ✅ | ✅ | ❌ | 1.0.10 |
-| 3FG15 | ✅\* | ❌ | ❌ | ❌ | — |
-| 3FG25 | ✅\* | ❌ | ❌ | ❌ | — |
+| 3FG15 | ✅\* | ❌ | ❌ | ❌ | N/A |
+| 3FG25 | ✅\* | ❌ | ❌ | ❌ | N/A |
 
 ✅ Supported · ❌ Not available · \* Evaluation only.
+N/A: no realtime firmware requirement because realtime control is not supported.
 Realtime force approach supports both position and velocity approach on 2FG7
 and 2FG14.
 
@@ -19,7 +20,7 @@ The table lists minimum realtime firmware versions. The SDK accepts these
 versions and newer ones using numeric version comparison; build hashes do not
 restrict compatibility. Device identity and response validation still apply.
 The reported build identifies what is installed, not whether that exact build
-has been tested. See the [2FG command contract](api/two-finger-grippers.md)
+has been tested. See the [2FG API guide](api/two-finger-grippers.md)
 for the force behavior available from 2FG7 firmware 1.0.34.
 
 The conventional 3FG API is available for evaluation only. It validates product

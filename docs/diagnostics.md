@@ -5,13 +5,14 @@ through the family-specific `diagnostics()` methods. These reads are intended
 for monitoring and troubleshooting; they are not a replacement for the
 motion-state methods and must not be called from a hard realtime callback.
 
-Every numeric `DiagnosticValue` has a `valid` flag and a
-`DiagnosticProvenance`. An invalid value is unavailable, not zero. A value
-whose provenance is `CommandDerived` is an echo of a command, not a sensor
-measurement. Session users can read the same data from the worker-owned,
-coherent `ParallelGripperSession::snapshot()`; the session refreshes the
-diagnostic block at its configured diagnostic period without opening a second
-device connection.
+Every numeric `DiagnosticValue` has a `valid` flag. Check it before using the
+value: an invalid value means the reading is unavailable, not that it is zero.
+`DiagnosticProvenance` tells you where the value came from. `CommandDerived`
+means it came from a command rather than a sensor.
+
+With a session, use `ParallelGripperSession::snapshot()` to read the cached
+diagnostics. The session reads diagnostics at the configured interval using
+its existing device connection.
 
 ## Connection identity
 
@@ -28,13 +29,14 @@ if (session.trySnapshot(state, identity) && identity.valid) {
 }
 ```
 
-The overload makes one nonblocking lock attempt. On contention both outputs
-are unchanged. Identity is refreshed on reconnect and invalid while recovery
-or a session fault is active. A valid identity identifies the last established
-connection; it does not make cached motion feedback fresh.
+This overload tries to acquire its lock once and returns without waiting. If
+the lock is busy, both outputs stay unchanged. The session reads identity again
+when it reconnects and marks it invalid during recovery or a session fault.
+A valid identity describes the last established connection. Check the age of
+motion feedback separately.
 
-For 2FG devices, validity-tagged board revisions, firmware CRC and five
-32-bit source-hash words accompany the version. Hash words are in printed
+For 2FG devices, the result also includes board revisions, firmware CRC and five
+32-bit source-hash words. Check each field's validity flag. Hash words are in printed
 order: encode each as eight hexadecimal digits, retaining leading zeros.
 RG supplies product code and firmware version; its unavailable board/CRC/hash
 fields are not measurements. The current 3FG API does not provide firmware
@@ -54,20 +56,21 @@ identity. None of these fields is a unique device serial number.
 
 The normal and realtime force fields preserve the firmware sign convention:
 closing into an object is negative and opening into an object is positive.
-Command force is a closing-force magnitude, not signed feedback. Use the absolute value
-only when displaying an unsigned magnitude; preserve the signed feedback and
-do not negate the command. The status-derived booleans identify busy,
-grip-detected, not-calibrated, and linear-sensor-error conditions.
+Command force specifies how much closing force to apply. Keep its sign separate
+from the feedback convention. Preserve signed feedback; use its absolute value
+only when displaying an unsigned magnitude. Do not negate the command.
+The status flags report whether the gripper is busy, has detected a grip, needs
+calibration, or has a linear sensor error.
 
 ## RG2 and RG6
 
 `RgGripper::diagnostics()` reports status bits, electrical values, temperature,
 depth and width telemetry, fingertip offset, error code, and signed realtime
 linear/angular velocity. `command_force_n` has `CommandDerived` provenance:
-RG grippers do not provide measured force feedback. Consumers must not present
-that value as contact force. The safety-switch channels and safety DC-error bit
-are included in the same coherent status image. The 5 V, safety-24 V, and
-plug-24 V readings are
+it reports the commanded force. RG grippers do not provide measured force
+feedback, so do not display this value as contact force. The same status read
+includes the safety-switch channels and safety DC-error flag. The 5 V,
+safety-24 V, and plug-24 V readings are
 reported in volts. `depth_acceleration_mm_s2` remains invalid because the
 device does not supply that measurement; it must not be interpreted as zero.
 
@@ -85,12 +88,12 @@ The ROS 2 `GripperStateBroadcaster` publishes a standard
 gripper. Its default topic name is relative, so a namespaced instance publishes
 `/<namespace>/diagnostics`; set the broadcaster's `diagnostics_topic` parameter
 to remap it. The status contains model, firmware/profile identity, connection
-and fault state, freshness, safety flags, health counters, and every available
+and fault state, sample age, safety flags, health counters, and every available
 family-specific diagnostic value as a named key/value entry. Fields that are
 not supported by the selected model or explicitly invalidated are omitted.
 Cached values can remain present while their age increases; check the status
-level and `diagnostic_age` before using them. The typed semantic state remains
-the authoritative source for per-field validity flags.
+level and `diagnostic_age` before using them. Use the typed state message to
+check each field's validity flag.
 
 For parallel grippers, `GripperState.firmware` and the diagnostic `firmware`
 key contain the observed version (plus source hash on 2FG). Invalid or

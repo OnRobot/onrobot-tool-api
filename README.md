@@ -30,7 +30,7 @@ Follow [installation](docs/installation.md), then
 | [RG2 and RG6](docs/api/rg-grippers.md) | Fingertip aperture, angular velocity and safety state |
 | [3FG15 and 3FG25](docs/api/three-finger-grippers.md) | Evaluation support for diameter and angle commands |
 | [Parallel session](docs/api/parallel-gripper-session.md) | Managed loop, watchdog, Stop and recovery |
-| [Diagnostics](docs/diagnostics.md) | Measurement validity, provenance and telemetry |
+| [Diagnostics](docs/diagnostics.md) | Available readings, where they come from and how to use them |
 | [Changelog](CHANGELOG.md) | Changes and compatibility notes |
 
 ## Offline documentation

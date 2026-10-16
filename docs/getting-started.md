@@ -1,8 +1,8 @@
 # Getting started
 
-Install the SDK using [installation](installation.md), then connect with the
-exact model attached to the Modbus endpoint. Construction opens the connection
-and validates product identity. Read state before commanding motion.
+Follow [installation](installation.md), then select the model you have connected.
+The gripper constructor opens the connection and checks that the device matches
+the selected model. Read its state before sending a motion command.
 
 ## Read state over Modbus TCP
 
@@ -49,7 +49,7 @@ cmake --build build --parallel 2
 The Compute Box default IP is `192.168.1.1`; substitute its configured address
 if changed and put your computer on the same subnet. Modbus TCP defaults to
 port 502; use `onrobot::tcp(argv[1], port)` for another port. A successful run
-prints firmware identity, aperture and available telemetry.
+prints the firmware version, aperture and available readings.
 
 ## Modbus RTU
 
@@ -64,22 +64,22 @@ const auto connection = onrobot::rtu(
     onrobot::Timeout{ 1000, 1000, 1000 });
 ```
 
-Pass `connection` to the gripper constructor. RTU uses 8E1 framing at 115200
-or 1000000 bit/s. Choose the baud rate configured on the device; use
+Pass `connection` to the gripper constructor. RTU uses 8 data bits, even parity
+and 1 stop bit (8E1), at 115200 or 1000000 bit/s. Choose the baud rate configured on the device; use
 `B115200` for 115200 bit/s. The mounting-dependent slave addresses are
 `Single` = 65, `Primary` = 66 and `Secondary` = 67. Your user must have
 permission to access the serial device.
 
-Only one Modbus master may own the serial bus. Do not run this example while
-a ROS hardware process owns the same gripper. Do not call direct gripper
-methods concurrently or create a second connection while a managed session
-owns the device.
+Only one Modbus master may use the serial bus. Do not run this example while
+a ROS hardware process controls the same gripper. Do not call direct gripper
+methods from multiple threads at the same time. While a managed session is
+connected, use that session for all communication with the gripper.
 
 ## Choose the API
 
 - [2FG7 and 2FG14](api/two-finger-grippers.md): `TwoFingerGripper`
 - [RG2 and RG6](api/rg-grippers.md): `RgGripper`, with installation-specific limits
-- [3FG15 and 3FG25 — evaluation only](api/three-finger-grippers.md): `ThreeFingerGripper`
+- [3FG15 and 3FG25 (evaluation only)](api/three-finger-grippers.md): `ThreeFingerGripper`
 - [Parallel session](api/parallel-gripper-session.md): managed command timing,
   state, Stop and recovery for 2FG and RG
 

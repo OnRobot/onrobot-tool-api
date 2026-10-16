@@ -1,17 +1,25 @@
 # Changelog
 
+## 1.2.1
+
+- Clarify documentation.
+
 ## 1.2.0
 
 - Accept firmware at or above each model's supported minimum.
 
-- Prevent blocked motion calls from crossing fault, recovery or reactivation
-  boundaries. Add coherent recovery request identity and retained outcomes
-  without changing existing process-image layouts.
+- Cancel waiting motion calls if a fault, recovery or deactivation occurs.
+  They cannot start motion after the session is activated again. Add recovery
+  request identifiers and keep the last recovery result available, without
+  changing existing state layouts.
 
-- Add force-, live-limit-, device- and direction-aware 2FG conventional
-  full-travel peak-speed conversion, with firmware-matched normalization,
-  a fastest-direction envelope and positive SI bounds selecting up to 100%.
-  Below-minimum positive requests select the slowest native speed (1%).
+- Convert 2FG conventional speed percentages to estimated peak aperture speeds
+  for a full opening or closing movement. The conversion follows the firmware's
+  calculation and uses the requested force, current force limit and device
+  calibration. It can select whichever estimated peak is higher, opening or
+  closing. A requested speed above the estimated maximum selects 100%; a speed
+  below the estimated minimum selects 1%. Requested speeds must be greater than
+  zero and must not be NaN or infinity.
 
 ## 1.1.0
 

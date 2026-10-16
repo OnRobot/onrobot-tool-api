@@ -1,7 +1,7 @@
 # 2FG7 and 2FG14 API
 
 `TwoFingerGripper` provides conventional and realtime control for 2FG7 and
-2FG14. Construction connects, checks product identity and loads active limits.
+2FG14. The constructor connects, checks the model and reads its current limits.
 See [supported devices](../supported-devices.md) for realtime compatibility.
 
 ## Width coordinates
@@ -22,8 +22,8 @@ external grip; realtime internal grip is not available.
 | Parameter | Unit | Valid range |
 |---|---|---|
 | `width_mm` | mm | Device-reported limits for the selected grip type |
-| `force_n` | N | Zero selects the device minimum; otherwise at least 20 N on 2FG7 or 40 N on 2FG14, up to the live conventional ceiling |
-| `speed_percent` | % | 1–100; native command percentage, not a linear mm/s scale |
+| `force_n` | N | Zero selects the device minimum; otherwise at least 20 N on 2FG7 or 40 N on 2FG14, up to the reported conventional force limit |
+| `speed_percent` | % | 1-100; the device's percentage setting, which is not a linear mm/s scale |
 
 ```cpp
 #include <onrobot_tool_api/two_finger_gripper.hpp>
@@ -48,10 +48,10 @@ the device-reported external-width endpoints, maximum conventional force and
 
 ### Conventional speed profiles
 
-The SDK provides a representative conversion between the native 2FG speed
-percentage and estimated full-travel peak aperture speed in mm/s. The conversion uses the
-requested force, the current device force ceiling, and an automatically selected
-device calibration:
+The SDK converts the 2FG speed percentage to an estimated peak aperture speed
+in mm/s for a full opening or closing movement. It uses the requested force,
+the current device force limit and a calibration selected automatically for
+the connected device:
 
 ```cpp
 #include <onrobot_tool_api/two_finger_gripper.hpp>
@@ -85,18 +85,22 @@ int main()
 }
 ```
 
-Check `velocityCalibration()` before calling either converter. An unrecognized
-or uncharacterized configuration returns no conversion; do not substitute
-another calibration. Native percentage commands remain available.
+Check `velocityCalibration()` before calling either converter. If the device
+configuration is unknown or has no calibration, the converter returns no value.
+Do not substitute another calibration. You can still send percentage commands.
 
-Use `ConventionalVelocityDirection::Fastest` to select the faster estimated
-full-travel peak of opening and closing. The inverse returns the greatest
-integer percentage whose estimated peak does not exceed the requested bound.
-Positive finite bounds above the modeled peak select 100%; bounds below the
-modeled minimum select 1%, whose estimated speed exceeds the request.
-Invalid or unsupported contexts return no value.
-The estimates characterize unloaded representative units, not certified
-speed limits. Native `speed_percent` commands remain available.
+Use `ConventionalVelocityDirection::Fastest` to select whichever estimated peak
+speed is higher: opening or closing. To convert a speed back to a percentage,
+the SDK selects the largest whole percentage whose estimated peak stays at or
+below the requested speed.
+
+A requested speed above the estimated maximum selects 100%. A request below
+the estimated minimum selects 1%, which is expected to move faster than requested.
+The requested speed must be greater than zero and must not be NaN or infinity.
+Invalid arguments or an unsupported configuration return no value.
+
+The estimates come from tests on representative unloaded grippers. They are not
+certified speed limits. You can also send native `speed_percent` commands.
 
 ## State and diagnostics
 
@@ -110,8 +114,8 @@ into an object produces **positive** feedback. Command force is a closing-force
 magnitude, not signed feedback. Preserve the signed feedback; use its absolute value only when
 displaying an unsigned magnitude.
 
-`diagnostics()` adds validity-tagged electrical, temperature, status and
-statistics data. See [diagnostics](../diagnostics.md).
+`diagnostics()` adds electrical readings, temperature, status and statistics,
+with validity flags. See [diagnostics](../diagnostics.md).
 
 ## Realtime control
 
@@ -123,11 +127,11 @@ statistics data. See [diagnostics](../diagnostics.md).
 | `RealtimeForceVelocityCommand` | Closing force (N), signed approach velocity (mm/s) |
 
 Position must stay within live external-width limits. Maximum approach velocity
-is 0–300 mm/s; signed velocity is −300–300 mm/s. Positive velocity opens and
+is 0-300 mm/s; signed velocity is -300-300 mm/s. Positive velocity opens and
 negative velocity closes. On 2FG7 firmware 1.0.34 and newer, opening ignores
 force; non-opening requests below 30 N (including zero) execute at 30 N.
 Negative targets are rejected. On earlier supported 2FG7 firmware, use at
-least 30 N; on 2FG14 use at least 40 N. Targets must not exceed the live realtime ceiling
+least 30 N; on 2FG14 use at least 40 N. Targets must not exceed the current realtime force limit
 from `limits()`. If no positive ceiling is reported, the SDK uses 95 N for
 2FG7 or 196 N for 2FG14. Releasing a force hold using a position command requires
 a target more than 1 mm above the current aperture. Use Stop to stop motion.
@@ -161,7 +165,7 @@ For a managed loop, command watchdog and recovery, use
 and `maximum_realtime_force_n` for realtime control. The ceilings are distinct;
 validate against the one for the selected control mode.
 
-`setSupplyPower()` accepts 14–48 W and verifies the result. The setting returns
+`setSupplyPower()` accepts 14-48 W and verifies the result. The setting returns
 to 14 W after a power cycle; apply another budget again when required. A session
 can reapply its configured budget after every connection. Select a budget
 appropriate for your supply and application; the ROS launch defaults to 48 W.
