@@ -1,7 +1,7 @@
 # RG2 and RG6 API
 
 `RgGripper` provides conventional and realtime control for RG2 and RG6.
-Construction connects and validates product identity. See
+The constructor connects and checks the model. See
 [supported devices](../supported-devices.md) for realtime compatibility.
 
 ## Coordinates and limits
@@ -52,7 +52,7 @@ uncompensated width, mechanism angle/velocity, task velocity, error code and
 raw status. Field suffixes identify units: mm, V, A, °C and rad.
 
 `identity()` returns product code and firmware version; `configuration()` reads
-long-term power limit. `diagnostics()` provides validity-tagged telemetry.
+the long-term power limit. `diagnostics()` provides readings with validity flags.
 RG command-force feedback is **command-derived, not measured contact force**;
 do not present it as a force-sensor reading. See [diagnostics](../diagnostics.md).
 
@@ -75,7 +75,7 @@ command watchdog, Stop and recovery.
 
 ## Stop and safety state
 
-Stop does not clear a latched fault. Check safety flags and remove the cause
+Stop does not clear a fault. Check safety flags and remove the cause
 before explicitly requesting recovery through a session. A safety DC error
 requires a device power cycle after making the equipment safe; software cannot
 clear it. Software Stop and reported safety state do not replace your
